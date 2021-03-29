@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
+#include "Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -82,6 +83,10 @@ AGameplayDemoCharacter::AGameplayDemoCharacter()
 
 	// Uncomment the following line to turn motion controllers on by default:
 	//bUsingMotionControllers = true;
+
+	JumpHeight = 600.0f;
+	WalkSpeed = 600.0f;
+	SprintSpeed = 1000.0f;
 }
 
 void AGameplayDemoCharacter::BeginPlay()
@@ -114,8 +119,11 @@ void AGameplayDemoCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	check(PlayerInputComponent);
 
 	// Bind jump events
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AGameplayDemoCharacter::MultipleJump);
+
+	// Bind sprint event
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &AGameplayDemoCharacter::Sprint);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &AGameplayDemoCharacter::Walk);
 
 	// Bind fire event
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AGameplayDemoCharacter::OnFire);
@@ -297,4 +305,26 @@ bool AGameplayDemoCharacter::EnableTouchscreenMovement(class UInputComponent* Pl
 	}
 	
 	return false;
+}
+
+void AGameplayDemoCharacter::Landed(const FHitResult& Hit)
+{
+	JumpCounter = 0;
+}
+
+void AGameplayDemoCharacter::MultipleJump() {
+	if (JumpCounter < JumpLimit) {
+		ACharacter::LaunchCharacter(FVector(0, 0, JumpHeight), false, true);
+		++JumpCounter;
+	}
+}
+
+void AGameplayDemoCharacter::Sprint()
+{
+	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+}
+
+void AGameplayDemoCharacter::Walk()
+{
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
