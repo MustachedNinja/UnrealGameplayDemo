@@ -170,4 +170,37 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float SprintSpeed;
+
+	UFUNCTION()
+		void DashForward();
+
+	UFUNCTION()
+		void DashLeft();
+
+	UFUNCTION()
+		void DashRight();
+
+	UFUNCTION()
+		void DashBack();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float DashDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float DashCooldown;
+
+	UPROPERTY()
+		bool CanDash;
+
+	UPROPERTY(EditAnywhere)
+		float DashStop;
+
+	UPROPERTY()
+		FTimerHandle UnusedHandle;
+
+	UFUNCTION()
+		void StopDash();
+
+	UFUNCTION()
+		void ResetDash();
 };

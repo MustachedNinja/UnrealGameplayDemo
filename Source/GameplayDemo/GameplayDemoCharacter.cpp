@@ -12,6 +12,7 @@
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 #include "Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h"
+#include "Runtime/Engine/Public/TimerManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -87,6 +88,11 @@ AGameplayDemoCharacter::AGameplayDemoCharacter()
 	JumpHeight = 600.0f;
 	WalkSpeed = 600.0f;
 	SprintSpeed = 1000.0f;
+
+	CanDash = true;
+	DashDistance = 6000.0f;
+	DashCooldown = 1.0f;
+	DashStop = 0.1f;
 }
 
 void AGameplayDemoCharacter::BeginPlay()
@@ -132,6 +138,12 @@ void AGameplayDemoCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 	EnableTouchscreenMovement(PlayerInputComponent);
 
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AGameplayDemoCharacter::OnResetVR);
+
+	// Bind dash events
+	PlayerInputComponent->BindAction("ForwardDash", IE_DoubleClick, this, &AGameplayDemoCharacter::DashForward);
+	PlayerInputComponent->BindAction("LeftDash", IE_DoubleClick, this, &AGameplayDemoCharacter::DashLeft);
+	PlayerInputComponent->BindAction("RightDash", IE_DoubleClick, this, &AGameplayDemoCharacter::DashRight);
+	PlayerInputComponent->BindAction("BackDash", IE_DoubleClick, this, &AGameplayDemoCharacter::DashBack);
 
 	// Bind movement events
 	PlayerInputComponent->BindAxis("MoveForward", this, &AGameplayDemoCharacter::MoveForward);
@@ -327,4 +339,51 @@ void AGameplayDemoCharacter::Sprint()
 void AGameplayDemoCharacter::Walk()
 {
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AGameplayDemoCharacter::DashForward()
+{
+	if (CanDash) {
+		GetCharacterMovement()->BrakingFrictionFactor = 0.0f;
+		LaunchCharacter(FVector(FirstPersonCameraComponent->GetForwardVector().X, FirstPersonCameraComponent->GetForwardVector().Y, 0).GetSafeNormal() * DashDistance, true, true);
+		CanDash = false;
+		GetWorldTimerManager().SetTimer(UnusedHandle, this, &AGameplayDemoCharacter::StopDash, DashStop, false);
+	}
+}
+
+void AGameplayDemoCharacter::DashLeft() {
+	if (CanDash) {
+		GetCharacterMovement()->BrakingFrictionFactor = 0.0f;
+		LaunchCharacter(FVector(FirstPersonCameraComponent->GetForwardVector().X, FirstPersonCameraComponent->GetForwardVector().Y, 0).RotateAngleAxis(-90, FVector(0,0,1)).GetSafeNormal() * DashDistance, true, true);
+		CanDash = false;
+		GetWorldTimerManager().SetTimer(UnusedHandle, this, &AGameplayDemoCharacter::StopDash, DashStop, false);
+	}
+}
+
+void AGameplayDemoCharacter::DashRight() {
+	if (CanDash) {
+		GetCharacterMovement()->BrakingFrictionFactor = 0.0f;
+		LaunchCharacter(FVector(FirstPersonCameraComponent->GetForwardVector().X, FirstPersonCameraComponent->GetForwardVector().Y, 0).RotateAngleAxis(90, FVector(0, 0, 1)).GetSafeNormal() * DashDistance, true, true);
+		CanDash = false;
+		GetWorldTimerManager().SetTimer(UnusedHandle, this, &AGameplayDemoCharacter::StopDash, DashStop, false);
+	}
+}
+
+void AGameplayDemoCharacter::DashBack() {
+	if (CanDash) {
+		GetCharacterMovement()->BrakingFrictionFactor = 0.0f;
+		LaunchCharacter(FVector(FirstPersonCameraComponent->GetForwardVector().X, FirstPersonCameraComponent->GetForwardVector().Y, 0).RotateAngleAxis(180, FVector(0, 0, 1)).GetSafeNormal() * DashDistance, true, true);
+		CanDash = false;
+		GetWorldTimerManager().SetTimer(UnusedHandle, this, &AGameplayDemoCharacter::StopDash, DashStop, false);
+	}
+}
+
+void AGameplayDemoCharacter::StopDash() {
+	GetCharacterMovement()->StopMovementImmediately();
+	GetWorldTimerManager().SetTimer(UnusedHandle, this, &AGameplayDemoCharacter::ResetDash, DashCooldown, false);
+	GetCharacterMovement()->BrakingFrictionFactor = 2.0f;
+}
+
+void AGameplayDemoCharacter::ResetDash() {
+	CanDash = true;
 }
