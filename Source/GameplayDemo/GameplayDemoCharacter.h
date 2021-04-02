@@ -57,6 +57,8 @@ public:
 protected:
 	virtual void BeginPlay();
 
+	virtual void Tick(float DeltaSeconds);
+
 public:
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -90,6 +92,9 @@ protected:
 
 	/** Fires a projectile. */
 	void OnFire();
+
+	/** Fires a grappling hook. */
+	void OnGrapple();
 
 	/** Resets HMD orientation and position in VR. */
 	void OnResetVR();
@@ -203,4 +208,19 @@ public:
 
 	UFUNCTION()
 		void ResetDash();
+
+	UPROPERTY()
+		float GrappleDistance;
+
+	UPROPERTY()
+		float GrappleRadius;
+
+	UPROPERTY()
+		bool GrappleConnected;
+
+	UPROPERTY()
+		FVector GrappleForce;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float GrappleBoost;
 };

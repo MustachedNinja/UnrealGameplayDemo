@@ -9,10 +9,13 @@
 #include "GameFramework/InputSettings.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 #include "Runtime/Engine/Classes/GameFramework/CharacterMovementComponent.h"
 #include "Runtime/Engine/Public/TimerManager.h"
+#include "Engine/EngineTypes.h"
+#include "Math/Vector.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -93,6 +96,12 @@ AGameplayDemoCharacter::AGameplayDemoCharacter()
 	DashDistance = 6000.0f;
 	DashCooldown = 1.0f;
 	DashStop = 0.1f;
+
+	GrappleConnected = false;
+	GrappleDistance = 6000.0f;
+	GrappleRadius = 20.0f;
+	GrappleForce = FVector(0.0f, 0.0f, 0.0f);
+	GrappleBoost = 1000.0f;
 }
 
 void AGameplayDemoCharacter::BeginPlay()
@@ -116,6 +125,12 @@ void AGameplayDemoCharacter::BeginPlay()
 	}
 }
 
+void AGameplayDemoCharacter::Tick(float DeltaSeconds) {
+	if (GrappleConnected) {
+		GetCharacterMovement()->Velocity += GrappleForce;
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -133,6 +148,8 @@ void AGameplayDemoCharacter::SetupPlayerInputComponent(class UInputComponent* Pl
 
 	// Bind fire event
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AGameplayDemoCharacter::OnFire);
+
+	PlayerInputComponent->BindAction("ShootGrapple", IE_Pressed, this, &AGameplayDemoCharacter::OnGrapple);
 
 	// Enable touchscreen input
 	EnableTouchscreenMovement(PlayerInputComponent);
@@ -204,6 +221,43 @@ void AGameplayDemoCharacter::OnFire()
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
 	}
+}
+
+float CalculateGrappleForce(FVector_NetQuantize hookPoint, FVector velocity, FVector currentLocation) {
+	FVector temp = currentLocation - hookPoint;
+	float temp2 = FVector::DotProduct(temp, velocity);
+	FVector temp3 = -2.0f * temp.GetSafeNormal() * temp2;
+	return 0.0f;
+}
+
+void AGameplayDemoCharacter::OnGrapple()
+{
+	if (GrappleConnected) {
+		// Disconnect the grapple
+		GrappleConnected = false;
+	}
+	else {
+		// Connect the grapple
+		FVector direction = FirstPersonCameraComponent->GetForwardVector().GetSafeNormal() * GrappleDistance;
+		FVector startPoint = GetActorLocation();
+		TArray<TEnumAsByte<EObjectTypeQuery>> objectTypesArray;
+		objectTypesArray.Add(UEngineTypes::ConvertToObjectType(ECC_WorldStatic));
+		TArray<AActor* > ignoreList;
+		FHitResult outHit;
+		bool hit = UKismetSystemLibrary::SphereTraceSingleForObjects(GetWorld(), startPoint, startPoint + direction, GrappleRadius, objectTypesArray, false, ignoreList, EDrawDebugTrace::ForDuration, outHit, true);
+		if (hit) {
+			GrappleConnected = true;
+			FVector_NetQuantize impactPoint = outHit.ImpactPoint;
+
+			GrappleForce = FVector(CalculateGrappleForce(impactPoint, GetCharacterMovement()->Velocity, GetActorLocation())) + FVector(FirstPersonCameraComponent->GetForwardVector().GetSafeNormal() * GrappleBoost);
+
+			// The following two lines should be running on every tick;
+			//GetCharacterMovement()->Velocity += FVector(CalculateGrappleForce(impactPoint, GetCharacterMovement()->Velocity, GetActorLocation()));
+			//GetCharacterMovement()->Velocity += FVector(FirstPersonCameraComponent->GetForwardVector().GetSafeNormal() * 50000.0f);
+		}
+
+	}
+
 }
 
 void AGameplayDemoCharacter::OnResetVR()
