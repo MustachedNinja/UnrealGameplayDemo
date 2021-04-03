@@ -16,6 +16,7 @@
 #include "Runtime/Engine/Public/TimerManager.h"
 #include "Engine/EngineTypes.h"
 #include "Math/Vector.h"
+#include "CableComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -57,6 +58,14 @@ AGameplayDemoCharacter::AGameplayDemoCharacter()
 	FP_MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("MuzzleLocation"));
 	FP_MuzzleLocation->SetupAttachment(FP_Gun);
 	FP_MuzzleLocation->SetRelativeLocation(FVector(0.2f, 48.4f, -10.6f));
+
+	Cable = CreateDefaultSubobject<UCableComponent>(TEXT("Cable"));
+	Cable->AttachToComponent(FP_MuzzleLocation, FAttachmentTransformRules::KeepRelativeTransform);
+	Cable->SetAttachEndTo(this, RootComponent->GetDefaultSceneRootVariableName());
+
+	Cable->NumSegments = 1;
+	Cable->EndLocation = FVector(0.0f, 0.0f, 0.0f);
+	Cable->bHiddenInGame = true;
 
 	// Default offset from the character location for projectiles to spawn
 	GunOffset = FVector(100.0f, 0.0f, 10.0f);
@@ -235,6 +244,7 @@ void AGameplayDemoCharacter::OnGrapple()
 	if (GrappleConnected) {
 		// Disconnect the grapple
 		GrappleConnected = false;
+		Cable->SetHiddenInGame(GrappleConnected);
 	}
 	else {
 		// Connect the grapple
@@ -248,6 +258,8 @@ void AGameplayDemoCharacter::OnGrapple()
 		if (hit) {
 			GrappleConnected = true;
 			FVector_NetQuantize impactPoint = outHit.ImpactPoint;
+
+			Cable->SetHiddenInGame(GrappleConnected);
 
 			GrappleForce = FVector(CalculateGrappleForce(impactPoint, GetCharacterMovement()->Velocity, GetActorLocation())) + FVector(FirstPersonCameraComponent->GetForwardVector().GetSafeNormal() * GrappleBoost);
 

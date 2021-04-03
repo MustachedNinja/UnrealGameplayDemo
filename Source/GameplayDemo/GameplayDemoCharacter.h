@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "GameplayDemoCharacter.generated.h"
+#include "CableComponent.h"
 
 class UInputComponent;
 class USkeletalMeshComponent;
@@ -30,6 +31,9 @@ class AGameplayDemoCharacter : public ACharacter
 	/** Location on gun mesh where projectiles should spawn. */
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
 		USceneComponent* FP_MuzzleLocation;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
+		UCableComponent* Cable;
 
 	/** Gun mesh: VR view (attached to the VR controller directly, no arm, just the actual gun) */
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
